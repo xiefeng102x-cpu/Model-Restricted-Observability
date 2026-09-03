@@ -87,7 +87,7 @@ def run(smoke: bool):
             for rep in range(n_test_clean):
                 s = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"p{p}_clean_{rep}", "pilot")
                 rng = np.random.default_rng(s)
-                delta, _ = _pilot_discrepancy(rho_before_noisy, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+                delta, _, _ = _pilot_discrepancy(rho_before_noisy, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
                 score_rows.append(dict(seed=seed, noise_p=p, zz_scale=None, condition="clean", label=0, delta_pilot=delta))
 
             for scale in zz_scales:
@@ -95,7 +95,7 @@ def run(smoke: bool):
                 for rep in range(n_test_tampered):
                     s = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"p{p}_zz{scale}_{rep}", "pilot")
                     rng = np.random.default_rng(s)
-                    delta, _ = _pilot_discrepancy(rho_after_noisy, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+                    delta, _, _ = _pilot_discrepancy(rho_after_noisy, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
                     score_rows.append(dict(seed=seed, noise_p=p, zz_scale=scale, condition=f"zz_scale_{scale}",
                                             label=1, delta_pilot=delta))
 

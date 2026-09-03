@@ -108,6 +108,10 @@ run_experiment61_benign_crosstalk_disambiguation.py      Benign static-ZZ crosst
 data/
   saved_states/            Raw persisted rho_A before/after per (dataset, seed) -- 10 .npz files
   manifold_artifacts/      Persisted R_manifold/Jacobian artifacts per (dataset, seed) -- 20 .npz files
+  Mnist/detail_single_samle/seed_{42..46}/layer_12_grid/t7_vs_t0/pr_0.1/
+                           Per-seed MNIST feature tensors theta re-derivation trains on
+  MedMnist/single_detect_20260411/epsilon_0.8/seed_{42..46}/layer_8_grid/t6_vs_t0/pr_0.1/
+                           Per-seed BloodMNIST feature tensors theta re-derivation trains on
   qmlreal_oracle_truth.csv Ambient blind-gradient ground truth per state
   *.csv                    Pre-computed per-experiment result tables
 
@@ -136,18 +140,19 @@ python run_experiment23_manifold_restricted_observability.py --smoke
 
 This reconstructs theta for one seed, verifies the reconstructed final
 classification accuracy and reduced state match the persisted `.npz` to
-machine precision, and reports `R_manifold`. Drop `--smoke` to run all 20
-classifier states (retrains each classifier deterministically from its
-recorded seed -- this is the slow path; each classifier takes on the order
-of minutes to retrain).
+machine precision, and reports `R_manifold`. Verified end-to-end: this
+completes with `ca_match=True`, `rho_match_err` at machine precision
+(~1e-17), and the `gamma_D` oracle cross-check matching to <1e-6. Drop
+`--smoke` to run all 20 classifier states (retrains each classifier
+deterministically from its recorded seed -- this is the slow path; each
+classifier takes on the order of minutes to retrain).
 
-> **Note:** theta re-derivation retrains from the raw MNIST / BloodMNIST
-> images, which are not bundled here. Place them at
-> `data/Mnist/detail_single_samle/` (MNIST, http://yann.lecun.com/exdb/mnist/)
-> and `data/MedMnist/single_detect_20260411/epsilon_0.8/` (BloodMNIST, from
-> MedMNIST v2 -- Yang et al., *Sci. Data* 2023, CC BY 4.0) before running
-> anything that calls `manifold/theta_jacobian.py`. This is **not** needed
-> to read the already-persisted states in `data/saved_states/` directly.
+Theta re-derivation retrains using the per-seed feature tensors already
+bundled at `data/Mnist/detail_single_samle/` (MNIST) and
+`data/MedMnist/single_detect_20260411/epsilon_0.8/` (BloodMNIST) -- no
+manual data placement is needed. (These are not the raw MNIST/BloodMNIST
+images themselves, but the PCA-reduced/amplitude-encoded per-seed feature
+tensors the training recipe consumes directly.)
 
 The VQE-checkpoint path is fast (no retraining, checkpoints are loaded
 directly):

@@ -94,7 +94,7 @@ def run(smoke: bool):
         for rep in range(n_calib):
             calib_seed = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"calib_{rep}", "pilot")
             rng = np.random.default_rng(calib_seed)
-            delta, _ = _pilot_discrepancy(rho_before, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+            delta, _, _ = _pilot_discrepancy(rho_before, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
             null_vals.append(delta)
         tau_gate = float(np.quantile(null_vals, GATE_QUANTILE))
         calib_rows.append(dict(seed=seed, n_calib=n_calib, tau_gate=tau_gate,
@@ -119,7 +119,7 @@ def run(smoke: bool):
 
                 score_seed = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"phimax{phi_max}_score_{rep}", "pilot")
                 rng_score = np.random.default_rng(score_seed)
-                delta, _ = _pilot_discrepancy(rho_benign, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng_score)
+                delta, _, _ = _pilot_discrepancy(rho_benign, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng_score)
                 deltas.append(delta)
                 fired.append(delta > tau_gate)
 

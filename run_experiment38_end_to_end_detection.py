@@ -88,14 +88,14 @@ def run(smoke: bool):
         for rep in range(n_calib):
             s = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"calib_{rep}", "pilot")
             rng = np.random.default_rng(s)
-            delta, _ = _pilot_discrepancy(rho_before, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+            delta, _, _ = _pilot_discrepancy(rho_before, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
             # not stored in score_rows -- calibration-only, by design
 
         # --- clean, TEST-set draws (label 0) ---
         for rep in range(n_test_clean):
             s = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"testclean_{rep}", "pilot")
             rng = np.random.default_rng(s)
-            delta, _ = _pilot_discrepancy(rho_before, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+            delta, _, _ = _pilot_discrepancy(rho_before, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
             score_rows.append(dict(seed=seed, condition="clean", label=0, delta_pilot=delta))
         print(f"seed={seed}: clean calibration ({n_calib}) + test ({n_test_clean}) done", flush=True)
 
@@ -109,7 +109,7 @@ def run(smoke: bool):
             for rep in range(n_test_tampered):
                 s = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"zz{scale}_{rep}", "pilot")
                 rng = np.random.default_rng(s)
-                delta, _ = _pilot_discrepancy(rho_after, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+                delta, _, _ = _pilot_discrepancy(rho_after, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
                 score_rows.append(dict(seed=seed, condition=f"zz_scale_{scale}", label=1, delta_pilot=delta))
             print(f"  zz scale={scale}: {n_test_tampered} tampered draws done", flush=True)
 
@@ -122,7 +122,7 @@ def run(smoke: bool):
         for rep in range(n_test_tampered):
             s = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"zonly_{rep}", "pilot")
             rng = np.random.default_rng(s)
-            delta, _ = _pilot_discrepancy(rho_z, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+            delta, _, _ = _pilot_discrepancy(rho_z, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
             score_rows.append(dict(seed=seed, condition="z_only", label=1, delta_pilot=delta))
         print(f"  z_only: {n_test_tampered} tampered draws done", flush=True)
 

@@ -126,7 +126,7 @@ def run(smoke: bool):
             for rep in range(n_test_clean):
                 s = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"g{g}_clean_{rep}", "pilot")
                 rng = np.random.default_rng(s)
-                delta, _ = _pilot_discrepancy(rho_before_noisy, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+                delta, _, _ = _pilot_discrepancy(rho_before_noisy, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
                 score_rows.append(dict(seed=seed, damping_g=g, condition="clean", label=0, delta_pilot=delta))
 
             for cond_name, rho_after in [("zz_full", rho_after_zz), ("z_only", rho_after_z)]:
@@ -134,7 +134,7 @@ def run(smoke: bool):
                 for rep in range(n_test_tampered):
                     s = derive_seed(EXPERIMENT_ID, f"{DATASET}_seed{seed}", f"g{g}_{cond_name}_{rep}", "pilot")
                     rng = np.random.default_rng(s)
-                    delta, _ = _pilot_discrepancy(rho_after_noisy, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
+                    delta, _, _ = _pilot_discrepancy(rho_after_noisy, jac_before, r_dc_before_offdiag, pool, N_PILOT, rng)
                     score_rows.append(dict(seed=seed, damping_g=g, condition=cond_name, label=1, delta_pilot=delta))
 
             print(f"seed={seed} damping_g={g}: clean+zz_full+z_only draws done", flush=True)
