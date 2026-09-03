@@ -1,0 +1,8 @@
+# Versions listed are those used to run the experiments; minor version
+# bumps are expected to work.
+
+numpy>=2.3.0
+scipy>=1.16.0
+scikit-learn>=1.7.0
+pandas>=2.3.0
+torch>=2.7.0
