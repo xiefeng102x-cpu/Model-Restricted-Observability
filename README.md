@@ -33,25 +33,28 @@ own locally reachable tangent space. The repository implements:
 ### What this code release does and does not include
 
 The paper's headline classifier results use a **10-seed cohort per dataset**
-(seeds 42-51), with every seed's trained `theta` persisted and a genuine
-held-out test accuracy computed for the first time. **This code release
-bundles data for 5 of those 10 seeds per dataset (42-46)** -- the original
-verification cohort, reconstructed deterministically from the recorded seed
-and cross-checked against persisted artifacts to machine precision (see
-"Data provenance" below). The scripts' own seed lists reflect the paper's
-true 10-seed design, so running them as-is will retrain and succeed for
-seeds 42-46 and raise a clear `ModuleNotFoundError` for seeds 47-51 (their
-data-generation module, `cohort_fresh/`, is not part of this minimal release).
-This is a deliberate scope choice, not a bug: every number reported in the
-paper for seeds 42-46 is reproducible end-to-end from this repository alone.
+(seeds 42-51): 5 "legacy" seeds (42-46), the original verification cohort,
+and 5 "fresh" seeds (47-51), added later with a natively-trained checkpoint
+for each. **This code release bundles data for all 10 seeds per dataset.**
+For seeds 42-46, `theta` is reconstructed deterministically from the
+recorded seed and cross-checked against persisted artifacts to machine
+precision; for seeds 47-51, the release bundles the actual trained
+checkpoint (`cohort_fresh/checkpoints/`), so `manifold/theta_jacobian.py`'s
+fast checkpoint-loading path is exercised for these seeds instead of
+retraining. Every script's own seed list already reflects the paper's true
+10-seed design, and running them as-is now retrains/loads and succeeds for
+all ten seeds 42-51: every number reported in the paper is reproducible
+end-to-end from this repository alone.
 
-Likewise, `theta`/held-out-accuracy persistence, the unified end-to-end
-detection pipeline, and the Theorem 3 condition audit are all implemented in
-the code exactly as the paper describes them (`manifold/theta_jacobian.py`'s
-fast checkpoint-loading path, `run_experiment59_trace_distance_baseline.py`'s
-paired-score detector, etc.), but this release does not bundle the specific
-result artifacts (`theorem3_condition_audit.csv`, the fresh-cohort
-checkpoints) produced by running that code on the full 10-seed cohort.
+`theta`/held-out-accuracy persistence, the unified end-to-end detection
+pipeline, and the Theorem 3 condition audit are all implemented in the code
+exactly as the paper describes them (`manifold/theta_jacobian.py`'s fast
+checkpoint-loading path, `run_experiment59_trace_distance_baseline.py`'s
+paired-score detector, etc.), and this release also bundles the result
+artifacts those produce on the full 10-seed cohort
+(`theorem3_condition_audit.csv`, `unified_detection_auc_summary.csv`, the
+fresh-cohort checkpoints), so they can be inspected directly without
+re-running the audit scripts.
 
 ---
 
@@ -124,18 +127,22 @@ run_experiment60_vqe_adaptive_recalibration.py           Adaptive recalibration 
 run_experiment61_benign_crosstalk_disambiguation.py      Benign static-ZZ crosstalk disambiguation (Section 8.9)
 
 data/
-  saved_states/            Raw persisted rho_A before/after per (dataset, seed) -- seeds 42-46
-  manifold_artifacts/      Persisted R_manifold/Jacobian artifacts per (dataset, seed) -- seeds 42-46
-  Mnist/detail_single_samle/seed_{42..46}/layer_12_grid/t7_vs_t0/pr_0.1/
+  saved_states/            Raw persisted rho_A before/after per (dataset, seed) -- seeds 42-51
+  manifold_artifacts/      Persisted R_manifold/Jacobian artifacts per (dataset, seed) -- seeds 42-51
+  Mnist/detail_single_samle/seed_{42..51}/layer_12_grid/t7_vs_t0/pr_0.1/
                            Per-seed MNIST feature tensors theta re-derivation trains on
-  MedMnist/single_detect_20260411/epsilon_0.8/seed_{42..46}/layer_8_grid/t6_vs_t0/pr_0.1/
+  MedMnist/single_detect_20260411/epsilon_0.8/seed_{42..51}/layer_8_grid/t6_vs_t0/pr_0.1/
                            Per-seed BloodMNIST feature tensors theta re-derivation trains on
-  qmlreal_oracle_truth.csv Ambient blind-gradient ground truth per state (seeds 42-46)
-  *.csv                    Pre-computed per-experiment result tables (seeds 42-46 unless noted)
+  qmlreal_oracle_truth.csv Ambient blind-gradient ground truth per state (seeds 42-51)
+  *.csv                    Pre-computed per-experiment result tables (seeds 42-51)
+
+cohort_fresh/checkpoints/   Trained theta checkpoints for the fresh cohort (seeds 47-51,
+                             both datasets); `manifold/theta_jacobian.py` loads these directly
+                             instead of retraining, mirroring how seeds 42-46 are re-derived
+                             deterministically from their recorded seed.
 
 checkpoints/                20 VQE checkpoints (theta_early / theta_late, 10 seeds -- VQE was
-                             always a 10-seed design and is unaffected by the classifier
-                             cohort's 5-vs-10-seed scope above)
+                             always a 10-seed design)
 ```
 
 ---
@@ -150,9 +157,9 @@ pip install -r requirements.txt
 
 ### Option A -- Verify from pre-computed data (fastest)
 
-The `data/` and `checkpoints/` directories already contain everything needed
-to re-derive and cross-check the paper's seed-42-46 numbers without
-retraining any classifier from scratch:
+The `data/`, `cohort_fresh/checkpoints/`, and `checkpoints/` directories
+already contain everything needed to re-derive and cross-check the paper's
+full seed-42-51 numbers without retraining any classifier from scratch:
 
 ```bash
 python run_experiment23_manifold_restricted_observability.py --smoke
@@ -163,13 +170,13 @@ classification accuracy and reduced state match the persisted `.npz` to
 machine precision, and reports `R_manifold`. Verified end-to-end: this
 completes with `ca_match=True`, `rho_match_err` at machine precision
 (~1e-17), and the `gamma_D` oracle cross-check matching to <1e-6. Drop
-`--smoke` to run every classifier state -- retrains each classifier
-deterministically from its recorded seed for seeds 42-46 (each takes on the
-order of minutes) and raises `ModuleNotFoundError` for seeds 47-51 (see
-"What this code release does and does not include" above), reporting `n/a`
-correctness-check counts for those rows rather than crashing.
+`--smoke` to run every classifier state across all ten seeds -- seeds 42-46
+retrain deterministically from their recorded seed (each takes on the order
+of minutes), and seeds 47-51 load their bundled checkpoint from
+`cohort_fresh/checkpoints/` directly (fast, no retraining), verified to
+reproduce the persisted `.npz` states to machine precision the same way.
 
-Theta re-derivation retrains using the per-seed feature tensors already
+Theta re-derivation/loading consumes the per-seed feature tensors already
 bundled at `data/Mnist/detail_single_samle/` (MNIST) and
 `data/MedMnist/single_detect_20260411/epsilon_0.8/` (BloodMNIST) -- no
 manual data placement is needed. (These are not the raw MNIST/BloodMNIST
@@ -196,32 +203,44 @@ python run_experiment45_white_box_adaptive_attacker.py
 ```
 
 All of these iterate the full seed list in the paper's current design
-(42-51 for the two classifier datasets); they will process seeds 42-46
-against the bundled data and then fail on seed 47 with a clear
-`ModuleNotFoundError` unless you supply your own `cohort_fresh/`
-data-generation module for the fresh-cohort seeds. Scripts write their
-output to a `results/` directory created next to the script; `data/*.csv`
-holds the already-computed seed-42-46 versions of the same tables used in
-the paper, for direct comparison.
+(42-51 for the two classifier datasets), and all ten seeds now run
+end-to-end against the bundled data (42-46 retrain deterministically,
+47-51 load their bundled checkpoint). Scripts write their output to a
+`results/` directory created next to the script; `data/*.csv` holds the
+already-computed seed-42-51 versions of the same tables used in the paper,
+for direct comparison.
 
 ---
 
 ## Data provenance
 
-- `data/saved_states/{dataset}_seed{seed}.npz` (seeds 42-46) -- the real,
+- `data/saved_states/{dataset}_seed{seed}.npz` (seeds 42-51) -- the real,
   trained `rho_A` before and after the ZZ-null-unitary intervention, for
-  each of these 5 MNIST + 5 BloodMNIST trained classifiers, plus each
+  each of these 10 MNIST + 10 BloodMNIST trained classifiers, plus each
   state's final classification accuracy and von Neumann entropy. `theta`
-  itself is not persisted in this .npz (see `manifold/theta_jacobian.py`);
-  it is re-derived deterministically from the recorded seed via
-  `torch.manual_seed` and the exact training recipe in
+  itself is not persisted in this .npz (see `manifold/theta_jacobian.py`).
+  For seeds 42-46 it is re-derived deterministically from the recorded seed
+  via `torch.manual_seed` and the exact training recipe in
   `candidate1_architecture_ladder_mnist.py` /
   `candidate3_architecture_ladder_bloodmnist.py`, and cross-checked against
-  the persisted final accuracy and reduced state before being trusted. The
-  paper's own submission separately persists the reconstructed `theta` for
-  all ten seeds per dataset, together with a genuine held-out test accuracy
-  computed from a real, never-before-used test split; that persisted-theta
-  archive is not part of this minimal code release.
+  the persisted final accuracy and reduced state before being trusted. For
+  seeds 47-51, the natively-trained `theta` checkpoint itself is bundled at
+  `cohort_fresh/checkpoints/` and loaded directly (no retraining), and is
+  likewise cross-checked against the persisted `.npz` state before being
+  trusted. Both paths reproduce their target state to machine precision
+  (see "Reproduction" above). The paper's own submission additionally
+  persists a genuine held-out test accuracy for all ten seeds per dataset,
+  computed from a real, never-before-used test split; that held-out-eval
+  harness (as opposed to the checkpoints/artifacts themselves, which are
+  bundled) is not part of this minimal code release.
+- `data/Mnist/detail_single_samle/seed_{42..51}/...` and
+  `data/MedMnist/single_detect_20260411/epsilon_0.8/seed_{42..51}/...` --
+  for seeds 42-46 these are the original per-seed feature tensors; for
+  seeds 47-51 they are generated by the same `clean_pool_for_new_seed`
+  routine `load_real_data()`'s own fallback path already uses, so the
+  bundled files are bit-identical to what that fallback would produce live
+  -- this just persists the result once instead of regenerating it on every
+  load.
 - `checkpoints/mvp133_frozen_rep_{cluster,midtrain}_n6_seed{0..9}.pt` --
   genuine (epoch-40, epoch-400) checkpoint pairs from the same training run
   for a 6-qubit, 6-layer VQE circuit, used as an architecturally distinct
@@ -230,8 +249,8 @@ the paper, for direct comparison.
   this circuit's 72 parameters do not).
 - `data/manifold_artifacts/` and the top-level `data/*.csv` files are this
   repository's own persisted analysis output (R_manifold values, Jacobians,
-  completion scores, detector AUCs, etc.) for seeds 42-46, included so every
-  reported seed-42-46 number can be checked without re-running the full
+  completion scores, detector AUCs, etc.) for seeds 42-51, included so every
+  reported number in the paper can be checked without re-running the full
   experimental suite.
 
 ---
