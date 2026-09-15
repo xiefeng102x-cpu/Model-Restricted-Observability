@@ -67,11 +67,10 @@ def _fresh_checkpoint_path(dataset_name: str, seed: int) -> Path:
 def reconstruct_theta(dataset_name: str, seed: int) -> ThetaState:
     """Fast path (QST fresh-cohort strategy, seeds 42-51 for mnist/bloodmnist):
     if a persisted checkpoint exists for this (dataset, seed) under
-    cohort_fresh/checkpoints/ (not bundled in this minimal code release --
+    cohort_fresh/checkpoints/ (bundled in this release for all ten seeds --
     see README), load theta/x_ref directly from it instead of re-running the
     ~5-20 minute training recipe below. Falls back to the original
-    always-retrain path for any (dataset, seed) without a fresh checkpoint,
-    so existing behavior is unaffected for this release's bundled seeds."""
+    always-retrain path for any (dataset, seed) without a fresh checkpoint."""
     ckpt_path = _fresh_checkpoint_path(dataset_name, seed)
     if ckpt_path.exists():
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)

@@ -68,13 +68,12 @@ def run(datasets: list, seeds_limit: int, stages: list, smoke: bool):
     for dataset_name in datasets:
         seeds = SEEDS_BY_DATASET[dataset_name][:seeds_limit]
         for seed in seeds:
-            # Seeds 47-51 (the QST fresh-cohort E3 extension) have no
-            # legacy saved_states .npz bundled in this release -- there is
-            # no "original" to reconstruct against, since these seeds never
-            # existed before this extension. Cross-check against it only
-            # for seeds where one exists (42-46); for new seeds, skip the
-            # ca_match/rho_match_err provenance check and report NaN/"n/a"
-            # rather than crashing or silently faking a match.
+            # All ten seeds (42-51) have a saved_states .npz bundled in this
+            # release, so the reconstruction/checkpoint-load path is always
+            # cross-checked below. The `saved is None` branch is kept for
+            # robustness (skips the check and reports NaN/"n/a" rather than
+            # crashing) in case this script is ever pointed at a seed
+            # without a bundled artifact.
             npz_path = SAVED_STATES_DIR / f"{dataset_name}_seed{seed}.npz"
             saved = np.load(npz_path, allow_pickle=True) if npz_path.exists() else None
 
@@ -164,10 +163,9 @@ def _summarize(rows):
                   f"fallback, consider pivoting the main line toward the phase-diagram framing "
                   f"instead of manifold restriction.")
 
-    # ca_match is None (not False) for fresh-cohort seeds 47-51: there is
-    # no legacy saved_states .npz to reconstruct against for a seed that
-    # never existed before, so "no comparison possible" must not be
-    # counted as "comparison failed" here.
+    # ca_match is None (not False) only if a seed's saved_states .npz is
+    # missing; "no comparison possible" must not be counted as "comparison
+    # failed" here. All ten bundled seeds (42-51) have one in this release.
     checkable = [r for r in rows if r["ca_match"] is not None]
     n_a_check = [r for r in rows if r["ca_match"] is None]
     bad_ca = [r for r in checkable if not r["ca_match"]]
