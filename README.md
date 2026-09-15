@@ -236,18 +236,6 @@ the paper, for direct comparison.
 
 ---
 
-## Citation
-
-```bibtex
-@article{xie2026modelrestricted,
-  title   = {Model-Restricted Observability and Measurement Completion in Quantum Learning Systems},
-  author  = {xiefeng102 and Zhang, Shibin},
-  year    = {2026}
-}
-```
-
----
-
 ## Contact
 
 xiefeng102 -- xiefeng102x@gmail.com
