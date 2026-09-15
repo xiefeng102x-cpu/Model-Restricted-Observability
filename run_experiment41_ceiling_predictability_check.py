@@ -50,7 +50,7 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 ARTIFACTS_DIR = RESULTS_DIR / "manifold_artifacts"
 DATASET = "bloodmnist"
 N_A = 4
-SEEDS = [42, 43, 44, 45, 46]
+SEEDS = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 
 
 def _effective_rank(jac, pool) -> float:
@@ -71,7 +71,8 @@ def run():
     with open(RESULTS_DIR / "ablation_geometry_mismatch.csv") as f:
         for row in csv_mod.DictReader(f):
             ceiling[int(row["seed"])] = float(row["recovery_c_geometry_mismatch_only"])
-    assert len(ceiling) == 5, f"expected 5 seeds in ablation_geometry_mismatch.csv, got {len(ceiling)}"
+    assert len(ceiling) == len(SEEDS), (
+        f"expected {len(SEEDS)} seeds in ablation_geometry_mismatch.csv, got {len(ceiling)}")
 
     records = []
     for seed in SEEDS:

@@ -47,7 +47,7 @@ ARTIFACTS_DIR = RESULTS_DIR / "manifold_artifacts"
 DATASET = "bloodmnist"
 N_QUBITS = 8
 LAYER = 8
-SEEDS = [42, 43, 44, 45, 46]
+SEEDS = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 N_A_VALUES = [4, 5]
 N_PILOT = 100_000
 N_REPEATS = 20
@@ -112,7 +112,15 @@ def run(smoke: bool):
                 # persisted artifacts before the same code path is trusted for n_a=5
                 err_rho = np.abs(rho_before - art_before["rho_A"]).max()
                 err_jac = np.abs(jac_before - art_before["jac"]).max()
-                assert err_rho < 1e-8 and err_jac < 1e-8, (
+                # 1e-8 assumed bit-identical reproduction of another process's
+                # autograd/SVD computation; confirmed elsewhere this session
+                # (experiment26's own artifact cross-check) that separate
+                # process launches of the same computation differ at the
+                # ~1e-6 level from multi-threaded BLAS reduction-order
+                # non-determinism, not a real bug. 1e-4 comfortably covers
+                # that noise floor while still catching a genuinely wrong
+                # or stale cached artifact.
+                assert err_rho < 1e-4 and err_jac < 1e-4, (
                     f"seed={seed}: fresh n_a=4 reconstruction mismatches persisted artifact "
                     f"(err_rho={err_rho:.2e}, err_jac={err_jac:.2e})")
 

@@ -52,7 +52,8 @@ from manifold.restricted_observability import compute_R_manifold
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 SAVED_STATES_DIR = Path(__file__).resolve().parent / "data" / "saved_states"
 
-SEEDS_BY_DATASET = {"mnist": [42, 43, 44, 45, 46], "bloodmnist": [42, 43, 44, 45, 46]}
+SEEDS_BY_DATASET = {"mnist": [42, 43, 44, 45, 46, 47, 48, 49, 50, 51],
+                     "bloodmnist": [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]}
 
 
 def run(datasets: list, seeds_limit: int, stages: list, smoke: bool):
@@ -67,23 +68,38 @@ def run(datasets: list, seeds_limit: int, stages: list, smoke: bool):
     for dataset_name in datasets:
         seeds = SEEDS_BY_DATASET[dataset_name][:seeds_limit]
         for seed in seeds:
+            # Seeds 47-51 (the QST fresh-cohort E3 extension) have no
+            # legacy saved_states .npz bundled in this release -- there is
+            # no "original" to reconstruct against, since these seeds never
+            # existed before this extension. Cross-check against it only
+            # for seeds where one exists (42-46); for new seeds, skip the
+            # ca_match/rho_match_err provenance check and report NaN/"n/a"
+            # rather than crashing or silently faking a match.
             npz_path = SAVED_STATES_DIR / f"{dataset_name}_seed{seed}.npz"
-            saved = np.load(npz_path, allow_pickle=True)
+            saved = np.load(npz_path, allow_pickle=True) if npz_path.exists() else None
 
             t_train0 = time.time()
             ts = reconstruct_theta(dataset_name, seed)
             train_time = time.time() - t_train0
 
-            saved_ca = float(saved["final_ca"])
-            ca_match = abs(ts.final_ca - saved_ca) < 1e-6
-            n_a = int(saved["n_a"])
-            assert n_a == ts.n_a, f"{dataset_name}/seed{seed}: n_a mismatch {n_a} vs {ts.n_a}"
+            if saved is not None:
+                saved_ca = float(saved["final_ca"])
+                ca_match = abs(ts.final_ca - saved_ca) < 1e-6
+                n_a = int(saved["n_a"])
+                assert n_a == ts.n_a, f"{dataset_name}/seed{seed}: n_a mismatch {n_a} vs {ts.n_a}"
+            else:
+                saved_ca = float("nan")
+                ca_match = None  # n/a: no legacy artifact to compare against for this seed
+                n_a = ts.n_a
             pool = build_pool(n_a)
 
             for stage in stages:
                 rho_A, jac = rho_A_and_jacobian(ts, stage)
-                saved_rho = saved[f"rho_{stage}"]
-                rho_match_err = float(np.abs(rho_A - saved_rho).max())
+                if saved is not None:
+                    saved_rho = saved[f"rho_{stage}"]
+                    rho_match_err = float(np.abs(rho_A - saved_rho).max())
+                else:
+                    rho_match_err = float("nan")
 
                 oracle_gamma0 = score_candidates(rho_A, pool.offdiag_matrices).gamma0
                 res = compute_R_manifold(rho_A, jac, pool)
@@ -148,12 +164,21 @@ def _summarize(rows):
                   f"fallback, consider pivoting the main line toward the phase-diagram framing "
                   f"instead of manifold restriction.")
 
-    bad_ca = [r for r in rows if not r["ca_match"]]
-    bad_rho = [r for r in rows if r["rho_match_max_abs_err"] > 1e-6]
+    # ca_match is None (not False) for fresh-cohort seeds 47-51: there is
+    # no legacy saved_states .npz to reconstruct against for a seed that
+    # never existed before, so "no comparison possible" must not be
+    # counted as "comparison failed" here.
+    checkable = [r for r in rows if r["ca_match"] is not None]
+    n_a_check = [r for r in rows if r["ca_match"] is None]
+    bad_ca = [r for r in checkable if not r["ca_match"]]
+    bad_rho = [r for r in checkable if r["rho_match_max_abs_err"] > 1e-6]
     bad_gamma = [r for r in rows if r["gamma_D_crosscheck_err"] > 1e-6]
-    print(f"\nCorrectness checks: {len(rows)-len(bad_ca)}/{len(rows)} exact CA match, "
-          f"{len(rows)-len(bad_rho)}/{len(rows)} rho_A match (<1e-6), "
-          f"{len(rows)-len(bad_gamma)}/{len(rows)} gamma_D oracle cross-check match (<1e-6).")
+    print(f"\nCorrectness checks ({len(checkable)}/{len(rows)} rows have a legacy artifact to "
+          f"check against; {len(n_a_check)} fresh-cohort rows have none): "
+          f"{len(checkable)-len(bad_ca)}/{len(checkable)} exact CA match, "
+          f"{len(checkable)-len(bad_rho)}/{len(checkable)} rho_A match (<1e-6), "
+          f"{len(rows)-len(bad_gamma)}/{len(rows)} gamma_D oracle cross-check match (<1e-6, "
+          f"self-consistent regardless of legacy-artifact availability).")
     if bad_ca or bad_rho or bad_gamma:
         print("  WARNING: some states failed a correctness check -- see CSV for details, "
               "do not trust R_manifold for those rows without investigating.")
@@ -172,7 +197,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action="store_true", help="1 state only (mnist seed42, before)")
     parser.add_argument("--datasets", nargs="+", default=["mnist", "bloodmnist"])
-    parser.add_argument("--seeds-limit", type=int, default=5)
+    parser.add_argument("--seeds-limit", type=int, default=10)
     parser.add_argument("--stages", nargs="+", default=["before", "after"])
     args = parser.parse_args()
     if args.smoke:

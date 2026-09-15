@@ -34,7 +34,7 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 ARTIFACTS_DIR = RESULTS_DIR / "manifold_artifacts"
 DATASET = "bloodmnist"
 N_A = 4
-SEEDS = [42, 43, 44, 45, 46]
+SEEDS = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 STAGES = ["before", "after"]
 N_XREF_VARIANTS = 4          # alternative same-class reference samples
 THETA_EPS_RELS = [0.001, 0.01]
@@ -80,7 +80,17 @@ def run(smoke: bool):
             rho0, jac0 = rho_A_and_jacobian(base_ts, stage)
             j0, m0, R0 = _j_star_C(rho0, jac0, pool)
             r0_manifold_stored = float(art["R_manifold"])
-            assert abs(R0 - r0_manifold_stored) < 1e-6, (state_id, R0, r0_manifold_stored)
+            # 1e-6 was tight enough for a single-process, single-thread-count
+            # comparison; this script recomputes R0 independently from the
+            # value experiment25 stored, and multi-threaded BLAS/SVD
+            # reduction order is not guaranteed bit-identical across
+            # separate process launches even at a fixed OMP_NUM_THREADS
+            # (confirmed empirically: two separate reruns gave 8.8e-6 and
+            # 2.45e-6 disagreement on the same state, both far below any
+            # plausible real-bug magnitude). 1e-4 comfortably covers this
+            # noise floor while still catching a genuinely wrong/stale
+            # cached artifact (which would differ by orders of magnitude).
+            assert abs(R0 - r0_manifold_stored) < 1e-4, (state_id, R0, r0_manifold_stored)
 
             n_xref_agree, n_xref_total = 0, 0
             for k in range(1, n_xref + 1):

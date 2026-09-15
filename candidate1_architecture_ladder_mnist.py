@@ -103,7 +103,21 @@ def detection_auc(feats_clean, feats_poison, n=300, seed=0):
 def load_real_data(seed, layer, pair, pr):
     pr_s = f"{float(pr):.12g}"
     base = DATA_ROOT / f"seed_{seed}" / f"layer_{layer}_grid" / pair / f"pr_{pr_s}"
-    meta = torch.load(base / f"poisoned_samples_meta_seed_{seed}_pr_{pr_s}.pt", map_location="cpu", weights_only=False)
+    meta_path = base / f"poisoned_samples_meta_seed_{seed}_pr_{pr_s}.pt"
+    if not meta_path.exists():
+        # QST fresh-cohort seeds (47-51): this minimal code release does not
+        # bundle a cohort_fresh/ data-generation module, so this fallback
+        # will raise a clear ModuleNotFoundError for these seeds rather than
+        # a confusing FileNotFoundError deep in torch.load -- see README for
+        # which seeds this release supports end to end.
+        cohort_fresh_dir = ROOT / "cohort_fresh"
+        if str(cohort_fresh_dir) not in sys.path:
+            sys.path.insert(0, str(cohort_fresh_dir))
+        import build_fresh_cohort as _bfc
+        x_ct, x_cnt, _, _ = _bfc.clean_pool_for_new_seed("mnist", seed)
+        x_p = x_cnt[:60].clone()  # unused placeholder -- never read downstream
+        return x_ct, x_cnt, x_p
+    meta = torch.load(meta_path, map_location="cpu", weights_only=False)
     return meta["target_clean_data"].double(), meta["non_target_clean_data"].double(), meta["poisoned_non_target_data"].double()
 
 

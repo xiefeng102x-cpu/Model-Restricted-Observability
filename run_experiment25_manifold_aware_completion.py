@@ -54,7 +54,7 @@ ARTIFACTS_DIR = RESULTS_DIR / "manifold_artifacts"
 # (the ambient oracle j*/gamma0 baseline) -- lives there, not duplicated here.
 ORACLE_CSV = Path(__file__).resolve().parent / "data" / "qmlreal_oracle_truth.csv"
 
-SEEDS = [42, 43, 44, 45, 46]
+SEEDS = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 STAGES = ["before", "after"]
 DATASET = "bloodmnist"
 N_A = 4
@@ -84,11 +84,19 @@ def run(smoke: bool):
             rho_A, jac = rho_A_and_jacobian(ts, stage)
             res = compute_R_manifold(rho_A, jac, pool)
 
-            np.savez(ARTIFACTS_DIR / f"{state_id}.npz",
-                     theta=ts.theta.detach().numpy(), rho_A=rho_A, jac=jac,
-                     g_coef=res.g_coef, r_DC_coef=res.r_DC_coef,
-                     gamma_D=res.gamma_D, gamma_D_C=res.gamma_D_C, R_manifold=res.R_manifold,
-                     tangent_rank=res.tangent_rank, null_dim=res.null_dim)
+            # Skip rewriting an already-cached artifact: other experiment
+            # scripts may be concurrently READING this exact file for the
+            # legacy seeds (42-46) right now, and an in-place np.savez
+            # overwrite of a file with a concurrent reader is exactly what
+            # produced a real BadZipFile/CRC race earlier this session --
+            # only write files that don't exist yet (new seeds 47-51).
+            art_path = ARTIFACTS_DIR / f"{state_id}.npz"
+            if not art_path.exists():
+                np.savez(art_path,
+                         theta=ts.theta.detach().numpy(), rho_A=rho_A, jac=jac,
+                         g_coef=res.g_coef, r_DC_coef=res.r_DC_coef,
+                         gamma_D=res.gamma_D, gamma_D_C=res.gamma_D_C, R_manifold=res.R_manifold,
+                         tangent_rank=res.tangent_rank, null_dim=res.null_dim)
 
             score_C = res.exact_score[pool.offdiag_idx]
             order_C = np.argsort(-score_C)

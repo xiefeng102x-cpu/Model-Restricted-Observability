@@ -51,7 +51,7 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 ARTIFACTS_DIR = RESULTS_DIR / "manifold_artifacts"
 DATASET = "bloodmnist"
 N_A = 4
-SEEDS = [42, 43, 44, 45, 46]
+SEEDS = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 
 
 def _cos(u, v):

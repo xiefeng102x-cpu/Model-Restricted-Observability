@@ -57,7 +57,7 @@ DATASET = "bloodmnist"
 N_A = 4
 N_QUBITS = 8
 LAYER = 8
-SEEDS = [42, 43, 44, 45, 46]
+SEEDS = [42, 43, 44, 45, 46, 47, 48, 49, 50, 51]
 N_RANDOM_SEARCH = 500
 EXPERIMENT_ID = "paper13_exp45_white_box_attacker_v1"
 

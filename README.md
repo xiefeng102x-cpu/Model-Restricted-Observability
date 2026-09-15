@@ -1,4 +1,4 @@
-# Code for "Model-Restricted Observability: Detecting Task-Preserving Tampering in Quantum Learning Systems"
+# Code for "Model-Restricted Observability and Measurement Completion in Quantum Learning Systems"
 
 **Authors:** xiefeng102, Shibin Zhang
 
@@ -15,25 +15,43 @@ diagnostic unless the diagnostic's blind gradient falls inside the model's
 own locally reachable tangent space. The repository implements:
 
 - the **R_manifold** structural-restriction diagnostic (Theorem 1, Section 3),
-- an **exact normalized observable-completion rule** for constructing a
-  measurement set that recovers as much of the blind gradient as the model's
-  own geometry allows (Section 4),
+- an **exact normalized observable-completion rule** (Proposition 2, Section 4)
+  for constructing a measurement set that recovers as much of the blind
+  gradient as the model's own geometry allows,
 - a **task-invariant deployment perturbation** and a **pilot-based adaptive
   recalibration** scheme that restores completion performance once enough
   perturbation has accumulated (Sections 5-6),
+- a **local stability bound** for how the restricted blind projector drifts
+  under deployment-time tangent-geometry perturbation (Lemma 1 / Theorem 3,
+  Section 6.3), with an estimator-error corollary connecting it to the
+  pilot-recalibration error decomposition,
 - the full experimental suite across BloodMNIST, MNIST, and an
   architecturally distinct VQE system, including adaptive white-box
   attackers, alternative diagnostics, noise-channel robustness checks, and a
   non-diagonal stress test (Section 8).
 
-**No raw training data is required to reproduce the paper's numbers.** The
-10 trained classifier states (5 MNIST + 5 BloodMNIST seeds, before/after the
-task-invariant perturbation) and the 20 VQE checkpoints used throughout are
-included under `data/` and `checkpoints/` respectively, together with the
-training/architecture code needed to deterministically re-derive the
-classifiers' trained parameters (theta is not itself persisted; see
-`manifold/theta_jacobian.py`'s own docstring for why re-derivation is exact
-and how it is cross-checked).
+### What this code release does and does not include
+
+The paper's headline classifier results use a **10-seed cohort per dataset**
+(seeds 42-51), with every seed's trained `theta` persisted and a genuine
+held-out test accuracy computed for the first time. **This code release
+bundles data for 5 of those 10 seeds per dataset (42-46)** -- the original
+verification cohort, reconstructed deterministically from the recorded seed
+and cross-checked against persisted artifacts to machine precision (see
+"Data provenance" below). The scripts' own seed lists reflect the paper's
+true 10-seed design, so running them as-is will retrain and succeed for
+seeds 42-46 and raise a clear `ModuleNotFoundError` for seeds 47-51 (their
+data-generation module, `cohort_fresh/`, is not part of this minimal release).
+This is a deliberate scope choice, not a bug: every number reported in the
+paper for seeds 42-46 is reproducible end-to-end from this repository alone.
+
+Likewise, `theta`/held-out-accuracy persistence, the unified end-to-end
+detection pipeline, and the Theorem 3 condition audit are all implemented in
+the code exactly as the paper describes them (`manifold/theta_jacobian.py`'s
+fast checkpoint-loading path, `run_experiment59_trace_distance_baseline.py`'s
+paired-score detector, etc.), but this release does not bundle the specific
+result artifacts (`theorem3_condition_audit.csv`, the fresh-cohort
+checkpoints) produced by running that code on the full 10-seed cohort.
 
 ---
 
@@ -64,7 +82,7 @@ entanglement_capacity_with_shot_noise.py      Entanglement-capacity diagnostic (
 mnist_null_intervention.py            ZZ-null-unitary "after"-state construction
 diagnostic_identifiability.py         Shared training/model-loading utilities
 
-run_experiment23_manifold_restricted_observability.py   R_manifold across all 20 classifier states
+run_experiment23_manifold_restricted_observability.py   R_manifold across all classifier states
 run_experiment24_mvp133_vqe_R_manifold.py                R_manifold on the VQE circuit (Section 8.1)
 run_experiment25_manifold_aware_completion.py            Manifold-aware vs. naive completion (Section 4)
 run_experiment26_j_star_C_stability.py                   Stability of the manifold-aware pick
@@ -79,7 +97,7 @@ run_experiment34_mnist_consistency_check.py              MNIST cross-check of th
 run_experiment35_multiple_perturbation_mechanisms.py     Multiple diagonal perturbation mechanisms
 run_experiment36_magnitude_sweep.py                      Perturbation-magnitude sweep (Section 8.5)
 run_experiment37_gated_adaptive_audit.py                 Gated static/adaptive audit policy (Section 10.1)
-run_experiment38_end_to_end_detection.py                 End-to-end clean-vs-tampered detector (Section 8.5)
+run_experiment38_end_to_end_detection.py                 Original end-to-end clean-vs-tampered detector (superseded by experiment59's unified pipeline for headline numbers)
 run_experiment39_ablation_geometry_mismatch.py           Geometry-mismatch-only ablation
 run_experiment40_ablation_candidate_pool_restriction.py  Candidate-pool-restriction ablation
 run_experiment41_ceiling_predictability_check.py         Predictability of the geometry-mismatch ceiling
@@ -101,21 +119,23 @@ run_experiment55_white_box_attacker_vs_pilot_detector.py Ring attacker vs. deplo
 run_experiment56_constrained_attacker_vs_pilot_detector.py  Constrained attacker vs. deployed pilot detector
 run_experiment57_noise_robustness_amplitude_damping.py   Amplitude-damping-noise robustness (Section 8.9)
 run_experiment58_near_threshold_amplitude_damping.py     Near-threshold amplitude-damping sweep
-run_experiment59_trace_distance_baseline.py              Trace-distance detector baseline (Section 8.5)
+run_experiment59_trace_distance_baseline.py              Unified detector pipeline: manifold-restricted, raw off-diagonal, and trace-norm scores from one frozen paired pilot-draw stream (Section 8.5's headline AUC numbers)
 run_experiment60_vqe_adaptive_recalibration.py           Adaptive recalibration on the VQE circuit
 run_experiment61_benign_crosstalk_disambiguation.py      Benign static-ZZ crosstalk disambiguation (Section 8.9)
 
 data/
-  saved_states/            Raw persisted rho_A before/after per (dataset, seed) -- 10 .npz files
-  manifold_artifacts/      Persisted R_manifold/Jacobian artifacts per (dataset, seed) -- 20 .npz files
+  saved_states/            Raw persisted rho_A before/after per (dataset, seed) -- seeds 42-46
+  manifold_artifacts/      Persisted R_manifold/Jacobian artifacts per (dataset, seed) -- seeds 42-46
   Mnist/detail_single_samle/seed_{42..46}/layer_12_grid/t7_vs_t0/pr_0.1/
                            Per-seed MNIST feature tensors theta re-derivation trains on
   MedMnist/single_detect_20260411/epsilon_0.8/seed_{42..46}/layer_8_grid/t6_vs_t0/pr_0.1/
                            Per-seed BloodMNIST feature tensors theta re-derivation trains on
-  qmlreal_oracle_truth.csv Ambient blind-gradient ground truth per state
-  *.csv                    Pre-computed per-experiment result tables
+  qmlreal_oracle_truth.csv Ambient blind-gradient ground truth per state (seeds 42-46)
+  *.csv                    Pre-computed per-experiment result tables (seeds 42-46 unless noted)
 
-checkpoints/                20 VQE checkpoints (theta_early / theta_late, 10 seeds)
+checkpoints/                20 VQE checkpoints (theta_early / theta_late, 10 seeds -- VQE was
+                             always a 10-seed design and is unaffected by the classifier
+                             cohort's 5-vs-10-seed scope above)
 ```
 
 ---
@@ -131,8 +151,8 @@ pip install -r requirements.txt
 ### Option A -- Verify from pre-computed data (fastest)
 
 The `data/` and `checkpoints/` directories already contain everything needed
-to re-derive and cross-check the paper's numbers without retraining any
-classifier from scratch:
+to re-derive and cross-check the paper's seed-42-46 numbers without
+retraining any classifier from scratch:
 
 ```bash
 python run_experiment23_manifold_restricted_observability.py --smoke
@@ -143,9 +163,11 @@ classification accuracy and reduced state match the persisted `.npz` to
 machine precision, and reports `R_manifold`. Verified end-to-end: this
 completes with `ca_match=True`, `rho_match_err` at machine precision
 (~1e-17), and the `gamma_D` oracle cross-check matching to <1e-6. Drop
-`--smoke` to run all 20 classifier states (retrains each classifier
-deterministically from its recorded seed -- this is the slow path; each
-classifier takes on the order of minutes to retrain).
+`--smoke` to run every classifier state -- retrains each classifier
+deterministically from its recorded seed for seeds 42-46 (each takes on the
+order of minutes) and raises `ModuleNotFoundError` for seeds 47-51 (see
+"What this code release does and does not include" above), reporting `n/a`
+correctness-check counts for those rows rather than crashing.
 
 Theta re-derivation retrains using the per-seed feature tensors already
 bundled at `data/Mnist/detail_single_samle/` (MNIST) and
@@ -155,7 +177,7 @@ images themselves, but the PCA-reduced/amplitude-encoded per-seed feature
 tensors the training recipe consumes directly.)
 
 The VQE-checkpoint path is fast (no retraining, checkpoints are loaded
-directly):
+directly) and covers all 10 VQE seeds:
 
 ```bash
 python run_experiment24_mvp133_vqe_R_manifold.py
@@ -168,28 +190,38 @@ directly from the repository root:
 
 ```bash
 python run_experiment25_manifold_aware_completion.py
-python run_experiment38_end_to_end_detection.py
+python run_experiment59_trace_distance_baseline.py
 python run_experiment45_white_box_adaptive_attacker.py
 # ... etc.
 ```
 
-Scripts write their output to a `results/` directory created next to the
-script; `data/*.csv` holds the already-computed versions of the same tables
-used in the paper, for direct comparison.
+All of these iterate the full seed list in the paper's current design
+(42-51 for the two classifier datasets); they will process seeds 42-46
+against the bundled data and then fail on seed 47 with a clear
+`ModuleNotFoundError` unless you supply your own `cohort_fresh/`
+data-generation module for the fresh-cohort seeds. Scripts write their
+output to a `results/` directory created next to the script; `data/*.csv`
+holds the already-computed seed-42-46 versions of the same tables used in
+the paper, for direct comparison.
 
 ---
 
 ## Data provenance
 
-- `data/saved_states/{dataset}_seed{seed}.npz` -- the real, trained
-  `rho_A` before and after the ZZ-null-unitary intervention, for each of
-  the 10 (5 MNIST + 5 BloodMNIST) trained classifiers, plus each state's
-  final classification accuracy and von Neumann entropy. `theta` itself is
-  not persisted (see `manifold/theta_jacobian.py`); it is re-derived
-  deterministically from the recorded seed via `torch.manual_seed` and the
-  exact training recipe in `candidate1_architecture_ladder_mnist.py` /
+- `data/saved_states/{dataset}_seed{seed}.npz` (seeds 42-46) -- the real,
+  trained `rho_A` before and after the ZZ-null-unitary intervention, for
+  each of these 5 MNIST + 5 BloodMNIST trained classifiers, plus each
+  state's final classification accuracy and von Neumann entropy. `theta`
+  itself is not persisted in this .npz (see `manifold/theta_jacobian.py`);
+  it is re-derived deterministically from the recorded seed via
+  `torch.manual_seed` and the exact training recipe in
+  `candidate1_architecture_ladder_mnist.py` /
   `candidate3_architecture_ladder_bloodmnist.py`, and cross-checked against
-  the persisted final accuracy and reduced state before being trusted.
+  the persisted final accuracy and reduced state before being trusted. The
+  paper's own submission separately persists the reconstructed `theta` for
+  all ten seeds per dataset, together with a genuine held-out test accuracy
+  computed from a real, never-before-used test split; that persisted-theta
+  archive is not part of this minimal code release.
 - `checkpoints/mvp133_frozen_rep_{cluster,midtrain}_n6_seed{0..9}.pt` --
   genuine (epoch-40, epoch-400) checkpoint pairs from the same training run
   for a 6-qubit, 6-layer VQE circuit, used as an architecturally distinct
@@ -198,8 +230,9 @@ used in the paper, for direct comparison.
   this circuit's 72 parameters do not).
 - `data/manifold_artifacts/` and the top-level `data/*.csv` files are this
   repository's own persisted analysis output (R_manifold values, Jacobians,
-  completion scores, detector AUCs, etc.), included so every reported number
-  can be checked without re-running the full experimental suite.
+  completion scores, detector AUCs, etc.) for seeds 42-46, included so every
+  reported seed-42-46 number can be checked without re-running the full
+  experimental suite.
 
 ---
 
@@ -207,7 +240,7 @@ used in the paper, for direct comparison.
 
 ```bibtex
 @article{xie2026modelrestricted,
-  title   = {Model-Restricted Observability: Detecting Task-Preserving Tampering in Quantum Learning Systems},
+  title   = {Model-Restricted Observability and Measurement Completion in Quantum Learning Systems},
   author  = {xiefeng102 and Zhang, Shibin},
   year    = {2026}
 }

@@ -57,7 +57,34 @@ class ThetaState:
     phis: list                    # ZZ-null-unitary angles used for the "after" stage
 
 
+_FRESH_COHORT_DIR = Path(__file__).resolve().parents[1] / "cohort_fresh" / "checkpoints"
+
+
+def _fresh_checkpoint_path(dataset_name: str, seed: int) -> Path:
+    return _FRESH_COHORT_DIR / f"{dataset_name}_seed{seed}.pt"
+
+
 def reconstruct_theta(dataset_name: str, seed: int) -> ThetaState:
+    """Fast path (QST fresh-cohort strategy, seeds 42-51 for mnist/bloodmnist):
+    if a persisted checkpoint exists for this (dataset, seed) under
+    cohort_fresh/checkpoints/ (not bundled in this minimal code release --
+    see README), load theta/x_ref directly from it instead of re-running the
+    ~5-20 minute training recipe below. Falls back to the original
+    always-retrain path for any (dataset, seed) without a fresh checkpoint,
+    so existing behavior is unaffected for this release's bundled seeds."""
+    ckpt_path = _fresh_checkpoint_path(dataset_name, seed)
+    if ckpt_path.exists():
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        n_qubits, layer, ring_pairs = ckpt["n_qubits"], ckpt["layer"], ckpt["ring_pairs"]
+        n_a = n_qubits // 2
+        rng_phi = np.random.RandomState(seed)
+        phis = list(rng_phi.uniform(-1.5, 1.5, size=len(ring_pairs)))
+        theta = ckpt["theta"].detach().clone().double().requires_grad_(True)
+        return ThetaState(dataset=dataset_name, seed=seed, theta=theta, n_qubits=n_qubits,
+                           layer=layer, ring_pairs=ring_pairs, n_a=n_a,
+                           x_ref=ckpt["x_ref"].double(), final_ca=ckpt["final_ca_train"],
+                           phis=phis)
+
     cfg = di.DATASETS[dataset_name]
     x_ct, x_cnt, x_p = cfg["load"](seed, cfg["layer"], cfg["pair"], cfg["pr"])
     model = di.make_model(dataset_name, seed)
