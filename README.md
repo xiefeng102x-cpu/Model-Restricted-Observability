@@ -1,6 +1,6 @@
 # Code for "Model-Restricted Observability and Measurement Completion in Quantum Learning Systems"
 
-**Authors:** xiefeng102, Shibin Zhang
+**Authors:** xiefeng102
 
 ---
 
